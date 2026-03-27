@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.recording-status {
+    font-weight: bold;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+</style>
+
+<h2>Create Order</h2>
+
+<form method="POST" enctype="multipart/form-data" class="card p-4">
+
+<div class="row">
+
+<div class="col-md-6">
+<label>Customer Name</label>
+<input class="form-control" type="text" name="customer_name" required>
+</div>
+
+<div class="col-md-6">
+<label>Place of Supply</label>
+<input class="form-control" type="text" name="place_of_supply" required>
+</div>
+
+</div>
+
+<br>
+
+<label>Dispatch Date</label>
+<input class="form-control" type="date" name="dispatch_date" required>
+
+<hr>
+
+<h5>Products</h5>
+
+<div id="product_container">
+
+<!-- FIRST PRODUCT ROW -->
+<div class="product_row mb-3 border p-3 rounded">
+    <div style="text-align:right;">
+    <button type="button" onclick="removeProduct(this)" class="btn btn-sm btn-danger">
+        ❌ Remove
+    </button>
+</div>
+
+<label>Product Name *</label>
+<input class="form-control" name="product_name[]" required>
+
+<br>
+
+<label>Product Code (Optional)</label>
+<input class="form-control" name="product_code[]">
+
+<br>
+
+<label>Quantity *</label>
+<input class="form-control" type="number" name="quantity[]" required>
+
+<br>
+<br>
+
+<label>Voice Note</label>
+
+<button type="button" onclick="startRecording(this)" class="btn btn-sm btn-primary">
+🎤 Start
+</button>
+
+<button type="button" onclick="stopRecording(this)" class="btn btn-sm btn-danger">
+⏹ Stop
+</button>
+
+<audio controls style="display:none; width:100%; margin-top:5px;"></audio>
+
+<input type="hidden" name="voice_note_blob[]">
+<div class="recording-status text-danger mt-2" style="display:none;">
+    🔴 Recording... <span class="timer">00:00</span>
+</div>
+
+</div>
+
+</div>
+
+<button type="button" onclick="addProduct()" class="btn btn-secondary mb-3">
++ Add Another Product
+</button>
+
+<br>
+
+<button class="btn btn-success">Save Order</button>
+
+</form>
+
+<script>
+
+function addProduct(){
+
+    let container = document.getElementById("product_container");
+
+    let html = `
+    <div class="product_row mb-3 border p-3 rounded">
+
+    <div style="text-align:right;">
+        <button type="button" onclick="removeProduct(this)" class="btn btn-sm btn-danger">
+            ❌ Remove
+        </button>
+    </div>
+
+        <label>Product Name *</label>
+        <input class="form-control" name="product_name[]" required>
+
+        <br>
+
+        <label>Product Code (Optional)</label>
+        <input class="form-control" name="product_code[]">
+
+        <br>
+
+        <label>Quantity *</label>
+        <input class="form-control" type="number" name="quantity[]" required>
+
+        <br>
+
+        <br>
+
+<label>Voice Note</label>
+
+<button type="button" onclick="startRecording(this)" class="btn btn-sm btn-primary">
+🎤 Start
+</button>
+
+<button type="button" onclick="stopRecording(this)" class="btn btn-sm btn-danger">
+⏹ Stop
+</button>
+
+<audio controls style="display:none; width:100%; margin-top:5px;"></audio>
+
+<input type="hidden" name="voice_note_blob[]">
+<div class="recording-status text-danger mt-2" style="display:none;">
+    🔴 Recording... <span class="timer">00:00</span>
+</div>
+
+    </div>
+    `;
+
+    container.insertAdjacentHTML("beforeend", html);
+}
+let mediaRecorder;
+let audioChunks = [];
+let timerInterval;
+let seconds = 0;
+
+function formatTime(sec){
+    let m = String(Math.floor(sec / 60)).padStart(2, '0');
+    let s = String(sec % 60).padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+function startRecording(btn){
+
+    let parent = btn.closest(".product_row");
+    let status = parent.querySelector(".recording-status");
+    let timerText = parent.querySelector(".timer");
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        seconds = 0;
+
+        status.style.display = "block";
+
+        timerInterval = setInterval(() => {
+            seconds++;
+            timerText.innerText = formatTime(seconds);
+        }, 1000);
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+
+            clearInterval(timerInterval);
+            status.style.display = "none";
+
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const audioURL = URL.createObjectURL(audioBlob);
+
+            let audio = parent.querySelector("audio");
+            audio.src = audioURL;
+            audio.style.display = "block";
+
+            let reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+
+            reader.onloadend = function () {
+                parent.querySelector("input[name='voice_note_blob[]']").value = reader.result;
+            };
+        };
+
+        mediaRecorder.start();
+    });
+}
+
+function stopRecording(btn){
+    if(mediaRecorder){
+        mediaRecorder.stop();
+    }
+}
+
+function removeProduct(btn){
+
+    let container = document.getElementById("product_container");
+    let rows = container.getElementsByClassName("product_row");
+
+    if(rows.length <= 1){
+        alert("At least one product is required!");
+        return;
+    }
+
+    btn.closest(".product_row").remove();
+}
+
+</script>
+
+
+{% endblock %}
