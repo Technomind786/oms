@@ -34,6 +34,7 @@ class Order(db.Model):
     sales_person = db.Column(db.String(100))
 
     status = db.Column(db.String(50), default="Pending")
+    updated_at = db.Column(db.DateTime)
 
     # ⭐ FIXED PROPERLY INSIDE CLASS
     completed_by = db.Column(db.String(100))

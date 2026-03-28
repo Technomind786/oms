@@ -236,7 +236,7 @@ def edit_order(order_id):
         return "❌ You can edit only your own orders"
 
     if request.method == "POST":
-
+        order.updated_at = datetime.now()
         order.customer_name = request.form["customer_name"]
         order.place_of_supply = request.form["place_of_supply"]
         order.dispatch_date = datetime.strptime(request.form["dispatch_date"], "%Y-%m-%d")
